@@ -32,7 +32,7 @@ def filtro_passa_baixa(data, alpha):
     
     return filtrado
 
-filename = "./parado_mexendo_cadeira.txt"
+filename = "./testes/parado_mexendo_cadeira.txt"
 with open(filename, 'r') as f:
     linhas = f.readlines()  # Lê todas as linhas do arquivo
     

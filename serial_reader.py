@@ -12,10 +12,9 @@ try:
     print(f"Conectado a {porta_serial}")
     time.sleep(2)  # Aguarda inicialização do Arduino
     
-    mensagem = input("Digite algo para enviar ao Arduino: ")
-    arduino.write((mensagem + "\n").encode())  # Envia os dados
+    mensagem = input("Digite o nome do arquivo que você quer salvar: ")
     print(f"Enviado: {mensagem}")
-
+    arquivo_saida = "./testes/" + mensagem + ".txt"
     # Criando/abrindo o arquivo para salvar os dados
     with open(arquivo_saida, "w") as arquivo:
         print("Iniciando leitura de dados... Pressione Ctrl+C para parar.")
