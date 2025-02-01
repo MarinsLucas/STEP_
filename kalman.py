@@ -10,8 +10,8 @@ class KalmanFilter:
         self.process_noise = process_noise  # Ruído do processo (Q)
         self.measurement_noise = measurement_noise  # Ruído da medição (R)
         
-        # Matriz de transição de estado (A): Assume-se que o estado não muda drasticamente
         self.state_transition = np.eye(len(initial_state))
+        # Matriz de transição de estado (A): Assume-se que o estado não muda drasticamente
         
         # Matriz de observação (H): Assume-se que medimos o estado diretamente
         self.observation_matrix = np.eye(len(initial_state))
@@ -55,7 +55,7 @@ def rectangular_integration(v0, a, t):
 # Exemplo de uso
 if __name__ == "__main__":
 
-    filename = "./testes/parado_mexendo_cadeira.txt"
+    filename = "./testes/Fazendo8.txt"
     with open(filename, 'r') as f:
         linhas = f.readlines()  # Lê todas as linhas do arquivo
         
@@ -69,21 +69,18 @@ if __name__ == "__main__":
 
     t = [0] #t
     for i in dts[1:]:
-        if i < 0:
-            print("i menor que zero!!!! Esse é um problema que precisa ser resolvido no arduino!!")
-            i *=-1
         t.append(t[-1] + i)
         
     # Extrai as acelerações
-    ax = [float(linha[1])+0.6 for linha in dados[1:]]  # m/s²
-    ay = [float(linha[2])-11.23 for linha in dados[1:]]  # m/s²
-    az = [float(linha[3])+0.1 for linha in dados[1:]]  # m/s²
+    ax = [float(linha[1])+0.8 for linha in dados[1:]]  # m/s²
+    ay = [float(linha[2])+ 0.27 for linha in dados[1:]]  # m/s²
+    az = [float(linha[3]) for linha in dados[1:]]  # m/s²
 
 
     # Extrai as velocidades angulares (giroscópio)
     gx = [float(linha[4]) for linha in dados[1:]]  # rad/s
     gy = [float(linha[5]) for linha in dados[1:]]  # rad/s
-    gz = [float(linha[6])-46 for linha in dados[1:]]  # rad/s
+    gz = [float(linha[6])+0.02 for linha in dados[1:]]  # rad/s
 
     # Cria a matriz measurements
     acc_measurements = np.column_stack((ax, ay, az))
@@ -92,8 +89,8 @@ if __name__ == "__main__":
     # Inicialização do filtro de Kalman
     acc_initial_state = np.array([ax[0], ay[0], az[0]])  # Estado inicial (ax, ay, az)
     acc_initial_covariance = np.eye(3) * 0.1  # Covariância inicial
-    acc_process_noise = np.eye(3) * 0.00001  # Ruído do processo #Quanto maior, o estado muda mais rápido
-    acc_measurement_noise = np.eye(3) * 0.01  # Ruído da medição #Quanto maior, menos a gente confia na medição
+    acc_process_noise = np.eye(3) * 0.001  # Ruído do processo #Quanto maior, o estado muda mais rápido
+    acc_measurement_noise = np.eye(3) * 0.1  # Ruído da medição #Quanto maior, menos a gente confia na medição
     
     # Parâmetros do filtro de Kalman para o giroscópio
     gyro_initial_state = np.array([0.0, 0.0, 0.0])  # Estado inicial (gx, gy, gz)
@@ -119,7 +116,7 @@ if __name__ == "__main__":
     acc_filtered_states = np.array(acc_filtered_states)
     gyro_filtered_states = np.array(gyro_filtered_states)
 
-    plot_acc = False; 
+    plot_acc = True; 
     plot_gyro = True; 
 
     if plot_acc:
@@ -143,6 +140,10 @@ if __name__ == "__main__":
 
         plt.show()
 
+        plt.scatter(ax, ay)
+        plt.axis('equal')
+        plt.show()
+
     if plot_gyro:
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 10))
         ax1.plot(t, gx, label="gx", color='r')
@@ -164,13 +165,21 @@ if __name__ == "__main__":
 
         plt.show()
     
-    vx = rectangular_integration(0, acc_filtered_states[:, 0], t)
-    vy = rectangular_integration(0, acc_filtered_states[:, 1], t)
+    angle_z = rectangular_integration(0, gz, t)
+
+    ax_rot = acc_filtered_states[:, 0] * np.cos(angle_z) - acc_filtered_states[:, 1] * np.sin(angle_z)
+    ay_rot = acc_filtered_states[:, 0] * np.sin(angle_z) + acc_filtered_states[:, 1] * np.cos(angle_z)
+
+
+    vx = rectangular_integration(0, ax_rot, t)
+    vy = rectangular_integration(0, ay_rot, t)
     vz = rectangular_integration(0, acc_filtered_states[:, 2], t)
     
+    
+
     plt.plot(t, vx, label="vx")
     plt.plot(t, vy, label="vy")
-    plt.plot(t, vz, label="vz")
+    # plt.plot(t, vz, label="vz")
     plt.title("Gráfico de velocidades (m/s)")
     plt.legend()
     plt.show()
@@ -183,11 +192,14 @@ if __name__ == "__main__":
     # Plotando o circuito
     plt.figure(figsize=(10, 5))
     # plt.plot(circuito_x, circuito_y, '-o', label="exato")
-    plt.plot(x, z, '-o', label="Calculado")
-    plt.axis("equal")
+    plt.plot(t, y, '-o', label="Calculado")
+    # plt.axis("equal")
     plt.xlabel("Posição X")
     plt.ylabel("Posição Y")
     plt.legend()
     plt.show()
 
-    quit()
+
+
+    plt.plot(t, angle_z)
+    plt.show()

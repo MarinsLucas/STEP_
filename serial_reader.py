@@ -2,7 +2,7 @@ import serial
 import time
 
 # Configuração da porta serial e arquivo
-porta_serial = "/dev/ttyACM0"  # Substitua pela porta correta
+porta_serial = "/dev/ttyUSB0"  # Substitua pela porta correta
 taxa_baude = 115200      # Deve ser a mesma configurada no Arduino
 arquivo_saida = "dados_serial.txt"
 arduino = serial.Serial(porta_serial, taxa_baude)
