@@ -87,6 +87,8 @@ def rotate_acceleration(accel_data, gyro_data, dt):
         accel_rotated = np.dot(R, accel_data)
         return accel_rotated
 
+
+
 # Exemplo de uso
 if __name__ == "__main__":
 
@@ -131,11 +133,7 @@ if __name__ == "__main__":
     gyro_initial_covariance = np.eye(3) * 0.1  # Covariância inicial
     gyro_process_noise = np.eye(3) * 0.0001  # Ruído do processo
     gyro_measurement_noise = np.eye(3) * 0.5  # Ruído da medição
-   
-    # gyro_q_angle = 0.001 # Ruído de processo, angulo
-    # gyro_q_bias = 0.003 # Ruído de processo, viés 
-    # gyro_covariance = np.eye(2) * 0.1 #covariancia inicial
-    # gyro_r = np.eye(2) * 0.1 #Ruído da medição
+
     
     acc_kf = KalmanFilter(acc_initial_state, acc_initial_covariance, acc_process_noise, acc_measurement_noise)
     gyro_kf = KalmanFilter(gyro_initial_state , gyro_initial_covariance, gyro_process_noise, gyro_measurement_noise)    # Aplicando o filtro de Kalman às medições
@@ -144,7 +142,10 @@ if __name__ == "__main__":
     gyro_filtered_states = []
     velocidades = [[0,0,0]]
     posicoes = [[0,0,0]]
-    orientacoes = [[0,0,0]]
+    orientacoes = [[1,0,0]]
+    orientacoes_q = [R.identity().as_quat()]
+
+
     for i in range(len(acc_measurements)):
         acc_kf.predict(dts[i])
         acc_kf.update(acc_measurements[i])
@@ -153,18 +154,23 @@ if __name__ == "__main__":
         gyro_kf.predict(dts[i])
         gyro_kf.update(gyro_measurements[i])
         gyro_filtered_states.append(gyro_kf.state)
-        # angle, bias = gyro_kf.estimate_angle(gyro_measurements[i, 2], acc_kf.state[:-1], current_time=t[i])
+       
+        delta_angle = gyro_kf.state * dts[i]
+        delta_rot = R.from_rotvec(delta_angle)
 
-        # orientacoes.append(angle)
-        orientacoes.append(orientacoes[-1] + gyro_kf.state*dts[i])
-        
+        nova_rotacao = delta_rot*R.from_quat(orientacoes_q[-1])
+        orientacoes_q.append(nova_rotacao.as_quat())
+
+        orientacoes.append(nova_rotacao.apply(orientacoes[0]))
+       
+
         #accel_to_velo_change = np.array([0, np.where(np.abs(acc_kf.state) < 0.04, 0, acc_kf.state)[1], 0])
         accel_to_velo_change = acc_kf.state
 
         velocidades.append(velocidades[-1] + dts[i]*accel_to_velo_change)
         #velocidades.append([0,1,0])
-        vel_dir = rotate_acceleration(velocidades[-1], orientacoes[-1], 1)
-
+        vel_dir = orientacoes[-1] * np.linalg.norm(velocidades[-1])
+        
         posicoes.append(posicoes[-1] + dts[i]*vel_dir)
 
     acc_filtered_states = np.array(acc_filtered_states)
@@ -243,11 +249,23 @@ if __name__ == "__main__":
 
     orientacoes = np.array(orientacoes)
     if plot_orient:
-
-        plt.plot(t, (orientacoes[:, 2]*180/np.pi))
+        plt.plot(t, (orientacoes[:, 0]*180/np.pi), label="o x")
+        plt.plot(t, (orientacoes[:, 1]*180/np.pi), label="o y")
+        plt.plot(t, (orientacoes[:, 2]*180/np.pi), label="o z")
         plt.title("Orientação (°)")
+        plt.legend()
         plt.show()
 
+
+    orientacoes_q = np.array(orientacoes_q)
+    if plot_orient:
+        plt.plot(t, (orientacoes_q[:, 0]*180/np.pi), label="q.w")
+        plt.plot(t, (orientacoes_q[:, 1]*180/np.pi), label="q.x")
+        plt.plot(t, (orientacoes_q[:, 2]*180/np.pi), label="q.y")
+        plt.plot(t, (orientacoes_q[:, 3]*180/np.pi), label="q.z")
+        plt.title("Orientação (°)")
+        plt.legend()
+        plt.show()
     # Criar figura e eixo
     fig, axis = plt.subplots()
     xdata, ydata = [], []
