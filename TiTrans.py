@@ -90,7 +90,7 @@ def rotate_acceleration(accel_data, gyro_data, dt):
 # Exemplo de uso
 if __name__ == "__main__":
 
-    filename = "./testes/CarroParado.txt"
+    filename = "./testes/CarroAndando30.txt"
     with open(filename, 'r') as f:
         linhas = f.readlines()  # Lê todas as linhas do arquivo
         
@@ -107,14 +107,14 @@ if __name__ == "__main__":
         t.append(t[-1] + i)
         
     # Extrai as acelerações
-    ax = [float(linha[1])*0 for linha in dados[1:]]  # m/s²
-    ay = [float(linha[2])+ 0.27 for linha in dados[1:]]  # m/s²
-    az = [float(linha[3])*0 for linha in dados[1:]]  # m/s²
+    ax = [float(linha[1]) - 0.7 for linha in dados[1:]]  # m/s²
+    ay = [float(linha[2]) + 0.2 for linha in dados[1:]]  # m/s²
+    az = [float(linha[3]) - 1.2 + 9.81 for linha in dados[1:]]  # m/s²
 
     # Extrai as velocidades angulares (giroscópio)
-    gx = [float(linha[4])*0 for linha in dados[1:]]  # rad/s
-    gy = [float(linha[5])*0 for linha in dados[1:]]  # rad/s
-    gz = [float(linha[6])+0.02 for linha in dados[1:]]  # rad/s
+    gx = [float(linha[4]) + 0.105 for linha in dados[1:]]  # rad/s
+    gy = [float(linha[5]) - 0.02 for linha in dados[1:]]  # rad/s
+    gz = [float(linha[6]) + 0.02 for linha in dados[1:]]  # rad/s
 
     # Cria a matriz measurements
     acc_measurements = np.column_stack((ax, ay, az))
@@ -126,14 +126,19 @@ if __name__ == "__main__":
     acc_process_noise = np.eye(3) * 0.001  # Ruído do processo #Quanto maior, o estado muda mais rápido
     acc_measurement_noise = np.eye(3) * 0.1  # Ruído da medição #Quanto maior, menos a gente confia na medição
     
-    # Parâmetros do filtro de Kalman para o giroscópio
+        # Parâmetros do filtro de Kalman para o giroscópio
     gyro_initial_state = np.array([0.0, 0.0, 0.0])  # Estado inicial (gx, gy, gz)
     gyro_initial_covariance = np.eye(3) * 0.1  # Covariância inicial
     gyro_process_noise = np.eye(3) * 0.0001  # Ruído do processo
-    gyro_measurement_noise = np.eye(3) * 0.1  # Ruído da medição
-
+    gyro_measurement_noise = np.eye(3) * 0.5  # Ruído da medição
+   
+    # gyro_q_angle = 0.001 # Ruído de processo, angulo
+    # gyro_q_bias = 0.003 # Ruído de processo, viés 
+    # gyro_covariance = np.eye(2) * 0.1 #covariancia inicial
+    # gyro_r = np.eye(2) * 0.1 #Ruído da medição
+    
     acc_kf = KalmanFilter(acc_initial_state, acc_initial_covariance, acc_process_noise, acc_measurement_noise)
-    gyro_kf = KalmanFilter(gyro_initial_state, gyro_initial_covariance, gyro_process_noise, gyro_measurement_noise)    # Aplicando o filtro de Kalman às medições
+    gyro_kf = KalmanFilter(gyro_initial_state , gyro_initial_covariance, gyro_process_noise, gyro_measurement_noise)    # Aplicando o filtro de Kalman às medições
     
     acc_filtered_states = []
     gyro_filtered_states = []
@@ -148,44 +153,105 @@ if __name__ == "__main__":
         gyro_kf.predict(dts[i])
         gyro_kf.update(gyro_measurements[i])
         gyro_filtered_states.append(gyro_kf.state)
+        # angle, bias = gyro_kf.estimate_angle(gyro_measurements[i, 2], acc_kf.state[:-1], current_time=t[i])
 
+        # orientacoes.append(angle)
         orientacoes.append(orientacoes[-1] + gyro_kf.state*dts[i])
         
-        velocidades.append(velocidades[-1] + dts[i]*acc_kf.state)
+        #accel_to_velo_change = np.array([0, np.where(np.abs(acc_kf.state) < 0.04, 0, acc_kf.state)[1], 0])
+        accel_to_velo_change = acc_kf.state
+
+        velocidades.append(velocidades[-1] + dts[i]*accel_to_velo_change)
+        #velocidades.append([0,1,0])
         vel_dir = rotate_acceleration(velocidades[-1], orientacoes[-1], 1)
 
         posicoes.append(posicoes[-1] + dts[i]*vel_dir)
 
-
     acc_filtered_states = np.array(acc_filtered_states)
-    plt.plot(t, acc_filtered_states[:, 0])
-    plt.plot(t, acc_filtered_states[:, 1])
-    plt.plot(t, acc_filtered_states[:, 2])
-    plt.show()
+    gyro_filtered_states = np.array(gyro_filtered_states)
+    plot_acc = True
+    plot_gyro = True
+    plot_pos = False
+    plot_orient = True
+    plot_velo = True
 
+    if plot_acc:
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 10))
+        ax1.plot(t, ax, label="ax", color='r')
+        ax1.plot(t, acc_filtered_states[:, 0], label="f_ax", color='b')
+        ax1.legend()
+        ax1.grid()
+        ax1.set_title('Gráfico de ax (latitudinal)')
 
+        ax2.plot(t, ay, label="ay", color='g')
+        ax2.plot(t, acc_filtered_states[:, 1], label="f_ay", color='b')
+        ax2.legend()
+        ax2.set_title('Gráfico de ay (longitudinal)')
+        
+        ax3.plot(t, az, label="az", color='y')
+        ax3.plot(t, acc_filtered_states[:, 2], label="f_az", color='b')
+        ax3.legend()
+        ax3.set_title('Gráfico de az (vertical)')
+        plt.tight_layout()
+        plt.show()
 
+        """ plt.scatter(ax, ay)
+        plt.axis('equal')
+        plt.title("Gráfico GG")
+        plt.show() """
+
+    if plot_gyro:
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 10))
+        ax1.plot(t, gx, label="gx", color='r')
+        ax1.plot(t, gyro_filtered_states[:, 0], label="f_ax", color='b')
+        ax1.legend()
+        ax1.grid()
+        ax1.set_title('Gráfico de gx')
+
+        ax2.plot(t, gy, label="gy", color='g')
+        ax2.plot(t, gyro_filtered_states[:, 1], label="f_ay", color='b')
+        ax2.legend()
+        ax2.set_title('Gráfico de ay')
+        
+        ax3.plot(t, gz, label="gz", color='y')
+        ax3.plot(t, gyro_filtered_states[:, 2], label="f_az", color='b')
+        ax3.legend()
+        ax3.set_title('Gráfico de az')
+        plt.tight_layout()
+
+        plt.show()
+
+    t.append(t[-1]+dts[0]) # necessário para os plots seguintes
     posicoes = np.array(posicoes)
-    t.append(t[-1]+dts[0])
+    velocidades= np.array(velocidades)
 
-    plt.plot(t, posicoes[:, 0])
-    plt.plot(t, posicoes[:, 1])
-    plt.plot(t, posicoes[:, 2])
-    plt.show()
+    if plot_velo:
+        plt.plot(t, velocidades[:, 0], label="vx")
+        plt.plot(t, velocidades[:, 1], label="vy")
+        plt.plot(t, velocidades[:, 2], label="vz")
+        plt.legend()
+        plt.title("Velocidades")
+        plt.show()
 
 
-    plt.plot(posicoes[:, 0], posicoes[:, 1])
-    plt.show()
+    if plot_pos:
+        plt.plot(t, posicoes[:, 0])
+        plt.plot(t, posicoes[:, 1])
+        plt.plot(t, posicoes[:, 2])
+        plt.title("Posicoes (m)")
+        plt.show()
 
     orientacoes = np.array(orientacoes)
+    if plot_orient:
 
-    plt.plot(t, orientacoes[:, 2]*180/np.pi)
-    plt.show()
+        plt.plot(t, (orientacoes[:, 2]*180/np.pi))
+        plt.title("Orientação (°)")
+        plt.show()
 
     # Criar figura e eixo
     fig, axis = plt.subplots()
     xdata, ydata = [], []
-    ln, = plt.plot([], [], 'r-', animated=False)
+    ln, = plt.plot([], [], 'o-', animated=False)
 
     # Função de inicialização
     def init():
