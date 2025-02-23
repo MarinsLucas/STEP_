@@ -111,10 +111,12 @@ if __name__ == "__main__":
     # Extrai as acelerações
     ax = [float(linha[1]) - 0.7 for linha in dados[1:]]  # m/s²
     ay = [float(linha[2]) + 0.2 for linha in dados[1:]]  # m/s²
-    az = [float(linha[3]) - 1.2 + 9.81 for linha in dados[1:]]  # m/s²
+    az = [float(linha[3]) + 9.66 for linha in dados[1:]]  # m/s²
+
+    print(sum(az)/len(az))
 
     # Extrai as velocidades angulares (giroscópio)
-    gx = [float(linha[4]) + 0.105 for linha in dados[1:]]  # rad/s
+    gx = [float(linha[4]) + 0.105 for linha in dados[1:]]  # rad/s+
     gy = [float(linha[5]) - 0.02 for linha in dados[1:]]  # rad/s
     gz = [float(linha[6]) + 0.02 for linha in dados[1:]]  # rad/s
 
@@ -144,7 +146,7 @@ if __name__ == "__main__":
     posicoes = [[0,0,0]]
     orientacoes = [[1,0,0]]
     orientacoes_q = [R.identity().as_quat()]
-
+    GRAVIDADE_GLOBAL = np.array([0, 0, 9.81]) 
 
     for i in range(len(acc_measurements)):
         acc_kf.predict(dts[i])
@@ -163,12 +165,11 @@ if __name__ == "__main__":
 
         orientacoes.append(nova_rotacao.apply(orientacoes[0]))
        
+        gravidade_no_sensor = nova_rotacao.inv().apply(GRAVIDADE_GLOBAL)
 
-        #accel_to_velo_change = np.array([0, np.where(np.abs(acc_kf.state) < 0.04, 0, acc_kf.state)[1], 0])
-        accel_to_velo_change = acc_kf.state
+        aceleracao_real = acc_kf.state - gravidade_no_sensor
 
-        velocidades.append(velocidades[-1] + dts[i]*accel_to_velo_change)
-        #velocidades.append([0,1,0])
+        velocidades.append(velocidades[-1] + dts[i]*aceleracao_real)
         vel_dir = orientacoes[-1] * np.linalg.norm(velocidades[-1])
         
         posicoes.append(posicoes[-1] + dts[i]*vel_dir)
