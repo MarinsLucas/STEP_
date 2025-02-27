@@ -111,7 +111,7 @@ if __name__ == "__main__":
     # Extrai as acelerações
     ax = [float(linha[1]) - 0.7 for linha in dados[1:]]  # m/s²
     ay = [float(linha[2]) + 0.2 for linha in dados[1:]]  # m/s²
-    az = [float(linha[3]) + 9.66 for linha in dados[1:]]  # m/s²
+    az = [float(linha[3]) + 9.60 for linha in dados[1:]]  # m/s²
 
     print(sum(az)/len(az))
 
@@ -147,6 +147,7 @@ if __name__ == "__main__":
     orientacoes = [[1,0,0]]
     orientacoes_q = [R.identity().as_quat()]
     GRAVIDADE_GLOBAL = np.array([0, 0, 9.81]) 
+    aceleracao_real_antiga = [0,0,0]
 
     for i in range(len(acc_measurements)):
         acc_kf.predict(dts[i])
@@ -169,17 +170,18 @@ if __name__ == "__main__":
 
         aceleracao_real = acc_kf.state - gravidade_no_sensor
 
-        velocidades.append(velocidades[-1] + dts[i]*aceleracao_real)
+        velocidades.append(velocidades[-1] + dts[i]*(aceleracao_real + aceleracao_real_antiga)/2)
+        aceleracao_real_antiga = aceleracao_real
         vel_dir = orientacoes[-1] * np.linalg.norm(velocidades[-1])
         
         posicoes.append(posicoes[-1] + dts[i]*vel_dir)
 
     acc_filtered_states = np.array(acc_filtered_states)
     gyro_filtered_states = np.array(gyro_filtered_states)
-    plot_acc = True
-    plot_gyro = True
-    plot_pos = False
-    plot_orient = True
+    plot_acc = False
+    plot_gyro = False
+    plot_pos = True
+    plot_orient = False
     plot_velo = True
 
     if plot_acc:
@@ -231,7 +233,7 @@ if __name__ == "__main__":
     t.append(t[-1]+dts[0]) # necessário para os plots seguintes
     posicoes = np.array(posicoes)
     velocidades= np.array(velocidades)
-
+    
     if plot_velo:
         plt.plot(t, velocidades[:, 0], label="vx")
         plt.plot(t, velocidades[:, 1], label="vy")
@@ -242,11 +244,16 @@ if __name__ == "__main__":
 
 
     if plot_pos:
+        #plt.plot(posicoes[:,0], posicoes[:, 1])
         plt.plot(t, posicoes[:, 0])
         plt.plot(t, posicoes[:, 1])
         plt.plot(t, posicoes[:, 2])
         plt.title("Posicoes (m)")
         plt.show()
+ 
+    plt.plot(posicoes[:,0], posicoes[:, 1])
+    plt.quiver(posicoes[:, 0], posicoes[:, 1], velocidades[:,0], velocidades[:, 1], angles="xy", scale_units="xy", scale=100, color="r", width=0.003, label="Velocidade")
+    plt.show()
 
     orientacoes = np.array(orientacoes)
     if plot_orient:
