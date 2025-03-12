@@ -251,8 +251,22 @@ if __name__ == "__main__":
         plt.title("Posicoes (m)")
         plt.show()
  
+    # Extraímos as componentes X, Y, Z da aceleração
+    ax, ay = acc_filtered_states[:, 0], acc_filtered_states[:, 1]
+
+    # Magnitude da aceleração total
+    aceleracao_magnitude = np.sqrt(ax**2 + ay**2)
     plt.plot(posicoes[:,0], posicoes[:, 1])
-    plt.quiver(posicoes[:, 0], posicoes[:, 1], velocidades[:,0], velocidades[:, 1], angles="xy", scale_units="xy", scale=100, color="r", width=0.003, label="Velocidade")
+    quiver = plt.quiver(posicoes[:-1, 0], posicoes[:-1, 1], velocidades[:-1,0], velocidades[:-1, 1], aceleracao_magnitude, angles="xy", scale_units="xy", scale=40,cmap="jet", width=0.003, label="Velocidade")
+    plt.colorbar(quiver, label="Magnitude da Aceleração")
+    plt.title("Gráfico Posição x Velocidade x Aceleracao")
+    plt.show()
+
+    freiando_ou_acelerando = np.sign(ay)
+    #plt.plot(posicoes[:,0], posicoes[:, 1], color="g")
+    quiver = plt.quiver(posicoes[:-1, 0], posicoes[:-1, 1], velocidades[:-1,0], velocidades[:-1, 1], freiando_ou_acelerando, angles="xy", scale_units="xy", scale=40,cmap="bwr", width=0.003, label="Velocidade")
+    plt.colorbar(quiver, label="Sinal da Aceleração")
+    plt.title("Zonas de Frenagem")
     plt.show()
 
     orientacoes = np.array(orientacoes)
