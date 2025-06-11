@@ -92,7 +92,7 @@ def rotate_acceleration(accel_data, gyro_data, dt):
 # Exemplo de uso
 if __name__ == "__main__":
 
-    filename = "./testes/CarroAndando30.txt"
+    filename = "./testes/br440.txt"
     with open(filename, 'r') as f:
         linhas = f.readlines()  # Lê todas as linhas do arquivo
         
@@ -107,18 +107,20 @@ if __name__ == "__main__":
     t = [0] #t
     for i in dts[1:]:
         t.append(t[-1] + i)
-        
+    
+    g =  9.81
     # Extrai as acelerações
-    ax = [float(linha[1]) - 0.7 for linha in dados[1:]]  # m/s²
-    ay = [float(linha[2]) + 0.2 for linha in dados[1:]]  # m/s²
-    az = [float(linha[3]) + 9.60 for linha in dados[1:]]  # m/s²
+    ax = [g*(float(linha[1]) - 0.309) for linha in dados[1:]]  # m/s²
+    ay = [g*(float(linha[2]) + 0.040) for linha in dados[1:]]  # m/s²
+    az = [g*(float(linha[3]) - 0.940) for linha in dados[1:]]  # m/s²
 
     print(sum(az)/len(az))
 
+    deg_rag = np.pi/180
     # Extrai as velocidades angulares (giroscópio)
-    gx = [float(linha[4]) + 0.105 for linha in dados[1:]]  # rad/s+
-    gy = [float(linha[5]) - 0.02 for linha in dados[1:]]  # rad/s
-    gz = [float(linha[6]) + 0.02 for linha in dados[1:]]  # rad/s
+    gx = [(float(linha[4]) - 3.0)*deg_rag for linha in dados[1:]]  # rad/s+
+    gy = [(float(linha[5]) + 5.55)*deg_rag for linha in dados[1:]]  # rad/s
+    gz = [(float(linha[6]) + 2.0)*deg_rag for linha in dados[1:]]  # rad/s
 
     # Cria a matriz measurements
     acc_measurements = np.column_stack((ax, ay, az))
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     posicoes = [[0,0,0]]
     orientacoes = [[1,0,0]]
     orientacoes_q = [R.identity().as_quat()]
-    GRAVIDADE_GLOBAL = np.array([0, 0, 9.81]) 
+    GRAVIDADE_GLOBAL = np.array([0, 0, 0]) 
     aceleracao_real_antiga = [0,0,0]
 
     for i in range(len(acc_measurements)):
@@ -178,10 +180,10 @@ if __name__ == "__main__":
 
     acc_filtered_states = np.array(acc_filtered_states)
     gyro_filtered_states = np.array(gyro_filtered_states)
-    plot_acc = False
-    plot_gyro = False
+    plot_acc = True
+    plot_gyro = True
     plot_pos = True
-    plot_orient = False
+    plot_orient = True
     plot_velo = True
 
     if plot_acc:
@@ -252,8 +254,8 @@ if __name__ == "__main__":
         plt.show()
  
     # Extraímos as componentes X, Y, Z da aceleração
-    ax, ay = acc_filtered_states[:, 0], acc_filtered_states[:, 1]
-
+    #ax, ay = acc_filtered_states[:, 0], acc_filtered_states[:, 1]
+    ax , ay = velocidades[:-1, 0], velocidades[:-1, 1]
     # Magnitude da aceleração total
     aceleracao_magnitude = np.sqrt(ax**2 + ay**2)
     plt.plot(posicoes[:,0], posicoes[:, 1])
